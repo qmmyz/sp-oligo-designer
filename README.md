@@ -1,10 +1,10 @@
 # Short-DNA oligo assembler
 
-**Need a short piece of DNA (up to ~130 bp) and don't want to pay gene-synthesis prices? Order three ordinary oligos instead, and let one PCR join them.**
-**想合成一段较短的 DNA（约 130 bp 以内），又不想付基因合成的价格？订 3 条普通寡核苷酸，一次 PCR 拼起来。**
+*[中文说明](README.zh.md)*
 
-This tool designs the three oligos for you, **checks its own answer** with an independent PCR simulation, and exports an order sheet.
-It is one static web page — no install, no server, **your sequences never leave your browser** — in English and Chinese (中 / EN switch, top right).
+**Need a short piece of DNA (up to ~130 bp) and don't want to pay gene-synthesis prices? Order three ordinary oligos instead, and let one PCR join them.**
+
+This tool designs the three oligos for you, **checks its own answer** with an independent PCR simulation, and exports an order sheet. It is one static web page — no install, no server, **your sequences never leave your browser** — in English and Chinese.
 
 > **[▶ Open the tool](https://qmmyz.github.io/oligo-assembly-designer/)** · or download `index.html` and open it locally.
 
@@ -49,7 +49,7 @@ The checker looks only at the final three oligos, simulates PCR (any 3′ end of
 - **In-silico only.** The design has not been wet-lab tested yet. The single 60 °C anneal, the amount of M and the cycle number are principled starting points, not a validated protocol. Run a gradient the first time.
 - **Sequence-verify your clone.** Oligos are synthesized with errors, and PCR assembly does not correct them. Clone the product and sequence it before you rely on it.
 - **No vector checks.** Reading frame across the vector junction and primer mispriming on the vector are not checked.
-- **Tm is calibrated, not authoritative.** Nearest-neighbour Tm (SantaLucia 1998), tuned to agree with SnapGene readings to within about 1 °C. If your own design tool disagrees, trust the gradient. Details: [docs/design-notes.md](docs/design-notes.md).
+- **Tm is calibrated, not authoritative.** Nearest-neighbour Tm (SantaLucia 1998), tuned to agree with SnapGene readings to within about 1 °C. If your own design tool disagrees, trust the gradient. Details: [docs/design-notes.md](docs/design-notes.md) (in Chinese).
 
 ## For developers
 
