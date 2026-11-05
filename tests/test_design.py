@@ -140,8 +140,29 @@ def test_bad_sp_inputs_caught(page):
         assert not v["ok"], label
 
 def test_infeasible_reports_clear_error(page):
-    d = js_design(page, "long", row_sp := ("ATG" + "GCT"*120))
-    assert d["ok"] is False and "找不到可行" in d["error"]
+    d = js_design(page, "long", "ATG" + "GCT"*120)
+    assert d["ok"] is False
+    assert "60" in d["error"] and str(len(UP) + 3 + 360 + len(DOWN)) in d["error"]   # 提到长度上限和片段长度
+
+# ---------- 中英切换 ----------
+def test_language_switch(page):
+    row = golden()[0]
+    msgs = {}
+    for lang in ("zh", "en"):
+        page.evaluate("l=>SPDesigner.setLang(l)", lang)
+        assert page.evaluate("SPDesigner.lang") == lang
+        d = js_design(page, row["name"], row["sp_dna"])
+        v = js_verify(page, up=UP, down=DOWN, sp=row["sp_dna"], F=d["F"], M=d["M"], R=d["R"])
+        assert v["ok"]                                              # 结论与语言无关
+        msgs[lang] = [c["msg"] for c in v["checks"]]
+        # 页面文案确实换了语言，且没有漏翻的空串
+        texts = page.evaluate("[...document.querySelectorAll('[data-i18n]')].map(e=>e.innerHTML)")
+        assert all(t.strip() for t in texts), texts
+        has_han = any(any("\u4e00" <= ch <= "\u9fff" for ch in t) for t in texts)
+        assert has_han == (lang == "zh")
+        assert page.evaluate("document.documentElement.lang") == ("zh-CN" if lang == "zh" else "en")
+    assert msgs["zh"] != msgs["en"] and len(msgs["zh"]) == len(msgs["en"])
+    page.evaluate("SPDesigner.setLang('zh')")
 
 # ---------- 通用 DNA 模式（非编码序列，可不带同源臂） ----------
 def _rand_dna(n, seed):

@@ -4,7 +4,7 @@
 <rect width="1200" height="430" rx="16" fill="#ffffff" stroke="#e1e5ec"/>
 <g font-family="-apple-system,Segoe UI,Helvetica,Arial,sans-serif">
 <text x="50" y="44" font-size="24" font-weight="700" fill="#1d2330">Three oligos assemble one short fragment in a single PCR</text>
-<text x="50" y="76" font-size="20" fill="#667085">Example: a 106 bp product (14 nt arm + 78 nt signal peptide + 14 nt arm)</text>
+<text x="50" y="76" font-size="20" fill="#667085">Example: a 106 bp product (14 nt arm + 78 nt insert + 14 nt arm)</text>
 <rect x="50.0" y="100" width="145.3" height="40" rx="6" fill="#d9892b"/><text x="62.0" y="127.0" fill="#fff" font-size="21" font-weight="600">arm</text>
 <rect x="195.3" y="100" width="809.4" height="40" rx="6" fill="#2f8f6b"/><text x="207.3" y="127.0" fill="#fff" font-size="21" font-weight="600">target DNA 78 nt</text>
 <rect x="1004.7" y="100" width="145.3" height="40" rx="6" fill="#d9892b"/><text x="1016.7" y="127.0" fill="#fff" font-size="21" font-weight="600">arm</text>
