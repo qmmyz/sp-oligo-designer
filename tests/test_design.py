@@ -142,3 +142,43 @@ def test_bad_sp_inputs_caught(page):
 def test_infeasible_reports_clear_error(page):
     d = js_design(page, "long", row_sp := ("ATG" + "GCT"*120))
     assert d["ok"] is False and "找不到可行" in d["error"]
+
+# ---------- 通用 DNA 模式（非编码序列，可不带同源臂） ----------
+def _rand_dna(n, seed):
+    import random
+    r = random.Random(seed)
+    return "".join(r.choice("ACGT") for _ in range(n))
+
+@pytest.mark.parametrize("total", [60, 90, 120, 130])
+@pytest.mark.parametrize("arms", [("", ""), (UP, DOWN)], ids=["no-arms", "arms"])
+def test_general_dna_mode(page, total, arms):
+    """total = 完整产物（含同源臂）长度。"""
+    up, down = arms
+    n = total - len(up) - len(down)
+    for seed in range(8):
+        s = _rand_dna(n, seed * 1000 + total)
+        d = js_design(page, "g", s, {"up": up, "down": down, "orf": False})
+        assert d["ok"], (total, seed, d.get("error"))
+        F, M, R = d["F"], d["M"], d["R"]
+        v = js_verify(page, up=up, down=down, sp=s, F=F, M=M, R=R, orf=False)
+        assert v["ok"], [c for c in v["checks"] if not c["ok"]]
+        assert py_ok(F, M, R, s, up, down)
+        assert v["aa"] is None                                     # 不做翻译
+        fr = d["ovF"]["b"] - d["ovR"]["a"]                         # F、R 直接重叠的长度（短片段常见）
+        for label, (f, m, r) in mutate_cases(F, M, R, d).items():  # 变异测试：关掉 ORF 检查后验证器仍要拦下
+            vv = js_verify(page, up=up, down=down, sp=s, F=f, M=m, R=r, orf=False)
+            if fr >= 12 and ("截短" in label or "漏掉 M" in label):
+                # F、R 自己就能互相引发，M 只是多余的：这些变体物理上仍能组装出产物，是合法设计，
+                # 不是验证器漏报。这里只要求两个验证器结论一致。
+                assert vv["ok"] == py_ok(f, m, r, s, up, down), f"两个验证器分歧：{total} {seed} {label}"
+                continue
+            assert not vv["ok"], f"JS 没拦住：{total} {seed} {label}"
+            assert not py_ok(f, m, r, s, up, down), f"Python 没拦住：{total} {seed} {label}"
+
+def test_orf_checks_default_on_and_switchable(page):
+    s = _rand_dna(100, 5)                       # 随机序列几乎肯定不以 ATG 开头
+    assert not s.startswith("ATG")
+    d = js_design(page, "g", s, {"up": "", "down": ""})
+    on = js_verify(page, up="", down="", sp=s, F=d["F"], M=d["M"], R=d["R"])           # 默认：检查 ORF
+    off = js_verify(page, up="", down="", sp=s, F=d["F"], M=d["M"], R=d["R"], orf=False)
+    assert not on["ok"] and off["ok"]

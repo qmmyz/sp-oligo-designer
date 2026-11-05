@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>信号肽 3 寡核苷酸组装引物设计器</title>
+<title>短 DNA 三寡核苷酸组装设计器</title>
 <style>
 :root{--bg:#f6f7f9;--card:#fff;--ink:#1d2330;--muted:#667085;--line:#e1e5ec;--acc:#2457c5;
 --arm:#d9892b;--sp:#2f8f6b;--F:#2457c5;--M:#7a4bc2;--R:#c2412d;--ok:#1f8a4c;--warn:#b9770e;--bad:#c2312d;--okbg:#e6f4ec;--warnbg:#fbf0dc;--badbg:#fbe4e2}
@@ -48,13 +48,13 @@ pre{background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:
 </head>
 <body>
 <div class="wrap">
-<h1>信号肽 3 寡核苷酸组装引物设计器</h1>
-<p class="sub">输入信号肽 DNA → 给出带同源臂的 F / M / R 三条寡核苷酸 → 页面内独立验证（模拟 PCR 闭包）→ 导出订购表。纯浏览器运行，序列不上传。</p>
+<h1>短 DNA 三寡核苷酸组装设计器</h1>
+<p class="sub">输入想合成的 DNA（约 130 bp 以内，可带同源臂）→ 给出带同源臂的 F / M / R 三条寡核苷酸 → 页面内独立验证（模拟 PCR 闭包）→ 导出订购表。纯浏览器运行，序列不上传。</p>
 
 <div class="grid">
 <div class="card">
-  <h2>1 · 信号肽序列</h2>
-  <label>每行一条：<span class="mono">名称 序列</span>（空格、制表符或逗号分隔）。可选第三列为预期氨基酸；也可粘贴 FASTA。</label>
+  <h2>1 · 目标 DNA 序列</h2>
+  <label>每行一条：<span class="mono">名称 序列</span>（空格、制表符或逗号分隔）。可选第三列为预期氨基酸（仅编码序列）；也可粘贴 FASTA。</label>
   <textarea id="input" spellcheck="false" wrap="off"></textarea>
   <div style="margin-top:8px"><button onclick="loadExample()">载入 C01–C09 示例</button> <button class="primary" onclick="run()">设计并验证</button></div>
 </div>
@@ -72,7 +72,8 @@ pre{background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:
     <div><label>Tm 目标窗口 上沿 (°C)</label><input type="number" id="tmHigh" value="61" step="0.5"></div>
     <div><label>Tm 硬下限 (°C)</label><input type="number" id="tmFloor" value="55" step="0.5"></div>
   </div>
-  <p class="note" style="margin-top:8px">Tm：SantaLucia 1998 最近邻法，50 mM Na⁺、0.9 µM 引物，盐校正用熵项式。参数用 8 个 SnapGene 读数拟合，与 SnapGene 相差 ≲1 °C（读数本身是取整的）。
+  <label style="margin-top:10px"><input type="checkbox" id="orf" checked> 目标是编码序列（检查 ATG 开头、读码框、无内部终止密码子）。合成非编码 DNA 时取消勾选。</label>
+  <p class="note" style="margin-top:8px">同源臂可留空（不需要重组时）。Tm：SantaLucia 1998 最近邻法，50 mM Na⁺、0.9 µM 引物，盐校正用熵项式。参数用 8 个 SnapGene 读数拟合，与 SnapGene 相差 ≲1 °C（读数本身是取整的）。
   评分：两个重叠区 Tm 都落进目标窗口优先，其次两者相差小、3′ 端为 G/C、总长短。诺唯赞 P516/P526 的通用程序是 60 °C 单一退火。</p>
 </div>
 </div>
@@ -176,14 +177,17 @@ function verify(spec){
   const off=[...pool].filter(s=>!T.includes(s)&&!rT.includes(s));
   add('offtarget',off.length===0,off.length?`出现 ${off.length} 条不属于目标产物的链（疑似错配引发）`:'所有中间产物都是目标产物的子序列，无错配产物');
   add('arms',T.startsWith(up)&&T.endsWith(down),'产物首尾分别是上游臂与下游臂');
-  add('spmid',T.slice(up.length,T.length-down.length)===sp,'两臂之间的序列与输入的信号肽 DNA 完全一致');
+  add('spmid',T.slice(up.length,T.length-down.length)===sp,'两臂之间的序列与输入的目标 DNA 完全一致');
   add('startF',F===T.slice(0,F.length),'F 是产物上链的前缀');
   add('startR',R===rT.slice(0,R.length),'R 是产物下链的前缀');
-  const aa=translate(sp);
-  add('atg',sp.startsWith('ATG'),'信号肽以 ATG 开头');
-  add('frame',sp.length%3===0,`信号肽长度 ${sp.length} nt 是 3 的倍数`);
-  add('stop',!aa.slice(0,-1).includes('*')&&!aa.includes('?'),'没有内部终止密码子');
-  if(spec.expectedAA)add('aa',aa===spec.expectedAA,`翻译结果与预期氨基酸${aa===spec.expectedAA?'一致':'不一致：'+aa+' ≠ '+spec.expectedAA}`);
+  let aa=null;
+  if(spec.orf!==false){                                  // 编码序列检查；合成非编码 DNA 时关闭
+    aa=translate(sp);
+    add('atg',sp.startsWith('ATG'),'序列以 ATG 开头');
+    add('frame',sp.length%3===0,`序列长度 ${sp.length} nt 是 3 的倍数`);
+    add('stop',!aa.slice(0,-1).includes('*')&&!aa.includes('?'),'没有内部终止密码子');
+    if(spec.expectedAA)add('aa',aa===spec.expectedAA,`翻译结果与预期氨基酸${aa===spec.expectedAA?'一致':'不一致：'+aa+' ≠ '+spec.expectedAA}`);
+  }
   return {ok:checks.every(c=>c.ok),checks,T,aa,pool:[...pool]};
 }
 function adviceFor(d){
@@ -198,7 +202,7 @@ function adviceFor(d){
   if(!/[GC]$/.test(d.R))w.push('R 的 3′ 末端不是 G/C。');
   // F 与 R 3′ 端互补 ≥3 nt
   if(rc(d.F.slice(-3))===d.R.slice(-3))w.push('F 与 R 的 3′ 末端 3 nt 互补，可能形成引物二聚体。');
-  if([d.F,d.M,d.R].some(o=>/(.)\1{5,}/.test(o)))w.push('含 ≥6 个连续相同碱基（来自 SP 本身的序列，合成和退火时留意）。');
+  if([d.F,d.M,d.R].some(o=>/(.)\1{5,}/.test(o)))w.push('含 ≥6 个连续相同碱基（来自序列本身，合成和退火时留意）。');
   return w;
 }
 
@@ -218,18 +222,18 @@ function parseInput(txt){
   const items=[];let fasta=null;
   for(const raw of txt.split(/\r?\n/)){
     const line=raw.trim();if(!line)continue;
-    if(line[0]==='>'){fasta={name:line.slice(1).trim().split(/\s+/)[0]||('SP'+(items.length+1)),seq:''};items.push(fasta);continue}
+    if(line[0]==='>'){fasta={name:line.slice(1).trim().split(/\s+/)[0]||('seq'+(items.length+1)),seq:''};items.push(fasta);continue}
     if(fasta&&/^[ACGTacgt\s]+$/.test(line)){fasta.seq+=line.replace(/\s/g,'').toUpperCase();continue}
     fasta=null;
     const p=line.split(/[\s,;\t]+/).filter(Boolean);
-    if(p.length===1)items.push({name:'SP'+(items.length+1),seq:p[0].toUpperCase()});
+    if(p.length===1)items.push({name:'seq'+(items.length+1),seq:p[0].toUpperCase()});
     else items.push({name:p[0],seq:p[1].toUpperCase(),aa:p[2]?p[2].toUpperCase():undefined});
   }
   return items;
 }
 function cfgFromUI(){
   return {up:$('up').value.trim().toUpperCase(),down:$('down').value.trim().toUpperCase(),
-    maxLen:+$('maxLen').value,minOv:+$('minOv').value,maxOv:+$('maxOv').value,tmFloor:+$('tmFloor').value,tmLow:+$('tmLow').value,tmHigh:+$('tmHigh').value};
+    maxLen:+$('maxLen').value,minOv:+$('minOv').value,maxOv:+$('maxOv').value,tmFloor:+$('tmFloor').value,tmLow:+$('tmLow').value,tmHigh:+$('tmHigh').value,orf:$('orf').checked};
 }
 const esc=s=>String(s).replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
 function mapSVG(d){
@@ -238,7 +242,7 @@ function mapSVG(d){
   const up=d.cfg.up.length,dn=d.cfg.down.length,spE=L-dn;
   let s=`<svg viewBox="0 0 ${W} ${H}" width="100%" role="img" aria-label="${esc(d.name)} 组装示意">`;
   s+=`<text class="lbl" x="${pad}" y="12">完整产物 ${L} bp</text>`;
-  s+=bar(0,up,18,'var(--arm)','上游臂')+bar(up,spE,18,'var(--sp)','信号肽 '+d.sp.length+' nt')+bar(spE,L,18,'var(--arm)','下游臂');
+  s+=bar(0,up,18,'var(--arm)','上游臂')+bar(up,spE,18,'var(--sp)','目标序列 '+d.sp.length+' nt')+bar(spE,L,18,'var(--arm)','下游臂');
   // 重叠区高亮
   s+=`<rect x="${x(d.ovF.a)}" y="14" width="${(d.ovF.b-d.ovF.a)*sc}" height="26" fill="none" stroke="var(--ink)" stroke-dasharray="3 2" rx="3"/>`;
   s+=`<rect x="${x(d.ovR.a)}" y="14" width="${(d.ovR.b-d.ovR.a)*sc}" height="26" fill="none" stroke="var(--ink)" stroke-dasharray="3 2" rx="3"/>`;
@@ -261,17 +265,17 @@ function render(results){
     html+=`<div class="card"><div class="sp-head"><b>${esc(r.name)}</b><span>${badge}<span class="badge ${tier}">${adv.length?adv.length+' 条提示':'无提示'}</span><span class="note">片段 ${r.full.length} bp · 重叠区最低 Tm ${mt.toFixed(1)} °C</span></span></div>`;
     html+=mapSVG(r);
     html+=`<table style="margin-top:8px"><tr><th>寡核苷酸</th><th>5′→3′ 序列</th><th>长度</th><th>说明</th></tr>
-      <tr><td><b>${esc(r.name)}_F</b></td><td class="seq">${esc(r.F)}</td><td>${r.F.length}</td><td>上游臂 + 信号肽 5′ 段；3′ 端 ${r.ovF.b-r.ovF.a} nt 与 M 相同</td></tr>
+      <tr><td><b>${esc(r.name)}_F</b></td><td class="seq">${esc(r.F)}</td><td>${r.F.length}</td><td>上游臂 + 序列 5′ 段；3′ 端 ${r.ovF.b-r.ovF.a} nt 与 M 相同</td></tr>
       <tr><td><b>${esc(r.name)}_M</b></td><td class="seq">${esc(r.M)}</td><td>${r.M.length}</td><td>中间模板（有义链），低浓度加入</td></tr>
-      <tr><td><b>${esc(r.name)}_R</b></td><td class="seq">${esc(r.R)}</td><td>${r.R.length}</td><td>下游臂 + 信号肽 3′ 段（反向互补）；3′ 端 ${r.ovR.b-r.ovR.a} nt 与 M 互补</td></tr></table>`;
+      <tr><td><b>${esc(r.name)}_R</b></td><td class="seq">${esc(r.R)}</td><td>${r.R.length}</td><td>下游臂 + 序列 3′ 段（反向互补）；3′ 端 ${r.ovR.b-r.ovR.a} nt 与 M 互补</td></tr></table>`;
     html+=`<details style="margin-top:6px"><summary>验证明细（${v.checks.length} 项）</summary><ul class="chk">${v.checks.map(c=>`<li class="${c.ok?'ok':'bad'}">${c.ok?'✓':'✗'} ${esc(c.msg)}</li>`).join('')}</ul>
-      <div class="note" style="margin-top:4px">翻译：<span class="mono">${esc(v.aa)}</span></div></details>`;
+      ${v.aa!==null?`<div class="note" style="margin-top:4px">翻译：<span class="mono">${esc(v.aa)}</span></div>`:''}</details>`;
     if(adv.length)html+=`<ul class="warns">${adv.map(w=>`<li>${esc(w)}</li>`).join('')}</ul>`;
     html+='</div>';
     for(const [suf,seq,role] of [['F',r.F,'正向引物（含上游臂）'],['M',r.M,'中间模板'],['R',r.R,'反向引物（含下游臂）']])orderRows.push([r.name+'_'+suf,seq,seq.length,role]);
   }
   const head=`<div class="card"><h2>结果概览</h2><span class="badge ${nOk===results.length?'b-ok':'b-bad'}">${nOk}/${results.length} 条设计并验证通过</span>
-    <div class="legend" style="margin-top:8px"><span><i style="background:var(--arm)"></i>同源臂</span><span><i style="background:var(--sp)"></i>信号肽</span><span><i style="background:var(--F)"></i>F</span><span><i style="background:var(--M)"></i>M</span><span><i style="background:var(--R)"></i>R</span><span>虚线框 = 重叠区</span></div></div>`;
+    <div class="legend" style="margin-top:8px"><span><i style="background:var(--arm)"></i>同源臂</span><span><i style="background:var(--sp)"></i>目标序列</span><span><i style="background:var(--F)"></i>F</span><span><i style="background:var(--M)"></i>M</span><span><i style="background:var(--R)"></i>R</span><span>虚线框 = 重叠区</span></div></div>`;
   let order='';
   if(orderRows.length){
     order=`<div class="card"><h2>订购表（${orderRows.length} 条）</h2>
@@ -280,11 +284,12 @@ function render(results){
     <p class="note">纯化方式按公司规格选择（均 ≤${results.find(r=>r.ok).cfg.maxLen} nt）。下单前请再用“验证明细”核对一遍序列。</p></div>`;
     window.__order=orderRows;
   }
+  const lens=results.filter(r=>r.ok).map(r=>r.full.length),prodRange=lens.length?(Math.min(...lens)===Math.max(...lens)?lens[0]:Math.min(...lens)+'–'+Math.max(...lens)):'—';
   const pcr=`<div class="card"><h2>PCR 起始方案（诺唯赞 P526 = 2× Phanta UniFi Master Mix, Dye Plus）</h2>
   <p class="note">依据 P516（同一预混液的无染料版）说明书 V24.1 的通用程序；我没有读到 P526 自己的说明书，请与你手里的说明书核对。M 的用量和循环数是我按三寡核苷酸组装的原理给的起点，未经实验验证。</p>
   <table><tr><th>体系（50 µl）</th><th>程序（单一退火温度）</th></tr><tr><td class="mono" style="font-size:12px">2× Master Mix 25 µl<br>F（10 µM）2 µl → 终浓度 0.4 µM<br>R（10 µM）2 µl → 终浓度 0.4 µM<br>M（先稀释到 1 µM）1 µl → 终浓度 0.02 µM<br>无模板 DNA；ddH₂O 补至 50 µl</td>
   <td class="mono" style="font-size:12px">98 °C 30 s<br>98 °C 10 s → <b>60 °C 10 s</b> → 72 °C 5 s（产物约 100 bp，15 s/kb 折算不足 2 s，取 5 s），25–35 个循环<br>72 °C 5 min</td></tr></table>
-  <p class="note">厂家规则：正反向引物 Tm 均 &gt;50 °C（厂家用 Primer Premier 5 算）时退火 60 °C；本设计让两个重叠区在 SnapGene 口径下落进目标窗口。产物约 103–115 bp，纯化时选适合小片段的方法，并用 2–3% 琼脂糖胶或 PAGE 区分产物与约 60 bp 的 M。</p></div>`;
+  <p class="note">厂家规则：正反向引物 Tm 均 &gt;50 °C（厂家用 Primer Premier 5 算）时退火 60 °C；本设计让两个重叠区在 SnapGene 口径下落进目标窗口。产物 ${prodRange} bp，纯化时选适合小片段的方法，并用 2–3% 琼脂糖胶或 PAGE 区分产物与约 60 bp 的 M。</p></div>`;
   $('out').innerHTML=head+html+order+pcr;
 }
 function run(){
@@ -293,7 +298,7 @@ function run(){
   for(const it of items){
     if(!/^[ACGT]+$/.test(it.seq)){res.push({name:it.name,ok:false,error:'序列含 A/C/G/T 以外的字符。'});continue}
     const d=design(it.name,it.seq,cfg);
-    if(d.ok){d.v=verify({up:cfg.up,down:cfg.down,sp:it.seq,F:d.F,M:d.M,R:d.R,maxLen:cfg.maxLen,expectedAA:it.aa});d.adv=adviceFor(d)}
+    if(d.ok){d.v=verify({up:cfg.up,down:cfg.down,sp:it.seq,F:d.F,M:d.M,R:d.R,maxLen:cfg.maxLen,expectedAA:it.aa,orf:cfg.orf});d.adv=adviceFor(d)}
     res.push(d);
   }
   render(res);window.__results=res;
@@ -302,7 +307,7 @@ function orderTSV(){return window.__order.map(r=>r.slice(0,3).join('\t')).join('
 function copyOrder(){navigator.clipboard.writeText(orderTSV()).catch(()=>{})}
 function downloadOrder(){
   const csv='name,sequence_5to3,length,role\n'+window.__order.map(r=>r.map(x=>/[,"]/.test(x)?'"'+String(x).replace(/"/g,'""')+'"':x).join(',')).join('\n')+'\n';
-  const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'}));a.download='sp_oligo_order.csv';a.click();
+  const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'}));a.download='oligo_order.csv';a.click();
 }
 window.SPDesigner={design,verify,closure,tm,rc,translate,parseInput,DEFAULTS};
 $('input').value=EXAMPLE;run();

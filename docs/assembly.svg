@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 430" width="100%" role="img" aria-labelledby="t d">
+<title id="t">Three-oligo assembly: F, M and R overlap to build a short DNA fragment</title>
+<desc id="d">A 106 bp product is covered by three oligos: F (57 nt) at the 5 prime end, M (60 nt) in the middle, and R (31 nt, reverse complement) at the 3 prime end. F and M share a 24 nt overlap; M and R share an 18 nt overlap.</desc>
+<rect width="1200" height="430" rx="16" fill="#ffffff" stroke="#e1e5ec"/>
+<g font-family="-apple-system,Segoe UI,Helvetica,Arial,sans-serif">
+<text x="50" y="44" font-size="24" font-weight="700" fill="#1d2330">Three oligos assemble one short fragment in a single PCR</text>
+<text x="50" y="76" font-size="20" fill="#667085">Example: a 106 bp product (14 nt arm + 78 nt signal peptide + 14 nt arm)</text>
+<rect x="50.0" y="100" width="145.3" height="40" rx="6" fill="#d9892b"/><text x="62.0" y="127.0" fill="#fff" font-size="21" font-weight="600">arm</text>
+<rect x="195.3" y="100" width="809.4" height="40" rx="6" fill="#2f8f6b"/><text x="207.3" y="127.0" fill="#fff" font-size="21" font-weight="600">target DNA 78 nt</text>
+<rect x="1004.7" y="100" width="145.3" height="40" rx="6" fill="#d9892b"/><text x="1016.7" y="127.0" fill="#fff" font-size="21" font-weight="600">arm</text>
+<rect x="392.5" y="92" width="249.1" height="262" rx="8" fill="none" stroke="#1d2330" stroke-width="2" stroke-dasharray="7 5" opacity=".55"/>
+<rect x="828.3" y="92" width="186.8" height="262" rx="8" fill="none" stroke="#1d2330" stroke-width="2" stroke-dasharray="7 5" opacity=".55"/>
+<rect x="50.0" y="170" width="591.5" height="40" rx="6" fill="#2457c5"/><text x="62.0" y="197.0" fill="#fff" font-size="21" font-weight="600">F  57 nt  →</text>
+<rect x="392.5" y="226" width="622.6" height="40" rx="6" fill="#7a4bc2"/><text x="404.5" y="253.0" fill="#fff" font-size="21" font-weight="600">M  60 nt  (middle, sense strand)</text>
+<rect x="828.3" y="282" width="321.7" height="40" rx="6" fill="#c2412d"/><text x="840.3" y="309.0" fill="#fff" font-size="21" font-weight="600">←  R  31 nt</text>
+<text x="392.5" y="372" font-size="20" fill="#1d2330">F–M overlap 24 nt · Tm ≈ 59 °C</text>
+<text x="1009.1" y="402" font-size="20" fill="#1d2330" text-anchor="end">M–R overlap 18 nt · Tm ≈ 59 °C</text>
+</g></svg>

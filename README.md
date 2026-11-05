@@ -1,53 +1,60 @@
-# sp-oligo-designer
+# Short-DNA oligo assembler
 
-**Signal-peptide DNA → three ≤60-nt oligos (F / M / R) with homology arms → in-page verification → order sheet.**
-**信号肽 DNA → 带同源臂的 3 条 ≤60 nt 寡核苷酸（F / M / R）→ 页面内独立验证 → 订购表。**
+**Need a short piece of DNA (up to ~130 bp) and don't want to pay gene-synthesis prices? Order three ordinary oligos instead, and let one PCR join them.**
+**想合成一段较短的 DNA（约 130 bp 以内），又不想付基因合成的价格？订 3 条普通寡核苷酸，一次 PCR 拼起来。**
 
-A single static page (`index.html`, no build step, no server, nothing is uploaded). Open it in a browser, paste signal-peptide (SP) sequences, and get oligos you can order directly. The UI is in Chinese.
-单文件网页，浏览器直接打开，序列不会上传。界面为中文。
+This tool designs the three oligos for you, **checks its own answer** with an independent PCR simulation, and exports an order sheet.
+It is one static web page: no install, no server, **your sequences never leave your browser**.
 
-![screenshot](docs/screenshot.png)
+> **[▶ Open the tool](https://qmmyz.github.io/oligo-assembly-designer/)** · or download `index.html` and open it locally.
+> The interface is in Chinese; this README explains everything you need (English UI: not yet).
 
-## Why three oligos / 为什么是 3 条
+![The tool, designing nine signal peptides](docs/screenshot.png)
 
-A signal peptide plus two 14-nt homology arms is ~100–115 bp. Two primers of ≤60 nt can overlap by only 5–17 nt, which is too short for a 60 °C anneal. Adding a middle oligo **M** gives two independent overlaps of 18–45 nt:
+## What it is good for
 
-```
- upstream arm   signal peptide (SP)                  downstream arm
- |-----------|=================================|--------------|   full product (top strand)
- F  →→→→→→→→→→→→→→→→→→
-                 M  →→→→→→→→→→→→→→→→→→→→→→→→→→→
-                                         ←←←←←←←←←←←←←←←←←←  R
-        F∩M overlap ┘                  └ M∩R overlap
-```
+Short, defined sequences that gene-synthesis services charge a lot for: signal peptides, linkers and tags, short promoters/RBS/terminators, and similar. Oligos are priced per nucleotide; a 106-bp fragment needs three oligos of about 150 nt in total (compare your own vendor's prices).
 
-- **F** = upstream arm + SP 5′ part. **M** = middle of the sense strand (no arms). **R** = reverse complement of the SP 3′ part, with the downstream arm at its 5′ end.
-- PCR: F and R at ~0.4 µM, M at ~0.02 µM, no template, **one** annealing temperature (60 °C).
+It was built for cloning nine signal peptides with homology arms (recombination cloning), but the arms are optional, so it works for any short DNA.
 
-## Usage / 使用
+## How it works
 
-1. Open `index.html` in a browser (it loads a 9-SP example and designs it on load).
-2. Paste one SP per line: `name  DNA` (optionally a third column with the expected amino acids), or a FASTA.
-3. Set the homology arms and limits if needed (defaults: 14-nt arms, ≤60 nt, overlap 18–45 nt, overlap Tm window 59–61 °C).
-4. **Design and verify** → check each design's map, warnings and PCR-program card → copy the oligos.
+![F, M and R overlap to build the fragment](docs/assembly.svg)
 
-The page also exposes `window.SPDesigner = {design, verify, tm, …}` for scripting.
+Two primers of ≤60 nt can only overlap by a few bases on a ~100 bp fragment, which is too short for a 60 °C anneal. A third oligo **M** in the middle gives two overlaps of 18–45 nt instead. For a **single PCR with one annealing temperature (59–61 °C)** the tool picks overlaps whose Tm falls in that window, keeps every oligo ≤60 nt, and prefers G/C at 3′ ends and no primer-dimer-prone ends.
 
-## Verification / 验证
+- **F** = (upstream arm +) 5′ part of your sequence · **M** = middle, sense strand · **R** = reverse complement of the 3′ part (+ downstream arm).
+- PCR: F and R at ~0.4 µM, M at ~0.02 µM, no template; the page shows a starting program for Vazyme P526 / Phanta UniFi.
 
-`verify()` looks only at the final three oligos: it simulates PCR as a closure (a 3′ end of ≥12 nt that pairs to another strand is extended to the template's 5′ end), then asserts that
+## Quick start
 
-- the pool assembles `upstream arm + SP + downstream arm` and its reverse complement,
-- every strand in the pool is a piece of that product (no off-target strands),
-- arms, ATG start, reading frame, no internal stop and the expected amino acids are right.
+1. Open the page. It loads a 9-sequence example and designs it immediately.
+2. Replace the text with your sequences, one per line: `name  DNA` (or paste FASTA).
+3. **Homology arms:** put yours in the two arm boxes, or clear both if you just need the bare DNA. If your sequence is a protein-coding gene keep *coding sequence* ticked (checks ATG, reading frame, internal stops); untick it for non-coding DNA.
+4. Click **设计并验证** (design and verify). Each design shows a map, the three oligos, warnings, and 验证明细 (the check list). **下载 CSV / 复制** gives the order sheet.
 
-`tests/test_design.py` re-implements Tm and the closure independently in Python and runs **mutation tests** (substituted/deleted bases, swapped F/R, broken overlaps, wrong arms) to confirm the verifier rejects bad oligos.
+Typical limit: product (including arms) up to about **130 bp** works reliably; at 140 bp only some sequences have a solution (random-sequence test: 30/30 designs up to 130 bp, 9/30 at 140 bp). Longer needs a different strategy.
 
-## Tm model / Tm 算法
+## How the answer is checked
 
-SantaLucia 1998 nearest-neighbour with the entropy-term salt correction `ΔS += 0.368·(N−1)·ln[Na⁺]`, 50 mM Na⁺, 0.9 µM oligo. The salt/concentration parameters were **fitted to 8 SnapGene readings** (all within ±0.9 °C); they are not SnapGene's published parameters. Details and caveats: [docs/design-notes.md](docs/design-notes.md).
+The checker looks only at the final three oligos, simulates PCR (any 3′ end of ≥12 nt that pairs with another strand is extended), and requires that:
 
-## Tests
+- the full product and its complement are formed, and **nothing else** is (no mispriming products among the three oligos);
+- the product is exactly *arm + your sequence + arm*, and F/R start the right strands;
+- for coding sequences: ATG start, frame, no internal stop, expected amino acids.
+
+`tests/` contains 31 tests: an independent Python re-implementation of the Tm and PCR simulation, plus **mutation tests** (substituted/deleted bases, swapped F/R, broken overlaps, wrong arms) that confirm the checker rejects bad oligos, for the signal-peptide set and for random non-coding DNA of 60–130 bp.
+
+## Please read: what this does not do
+
+- **In-silico only.** The design has not been wet-lab tested yet. The single 60 °C anneal, the M amount and the cycle number are principled starting points, not validated protocol.
+- **Sequence-verify your clone.** Oligos are synthesized with errors; PCR assembly has no proofreading step for them. Clone the product and sequence it before you rely on it.
+- **No vector checks.** Reading frame across the vector junction and primer mispriming on the vector are not checked.
+- **Tm is an empirical fit.** It is SantaLucia-1998 nearest-neighbour with parameters fitted to 8 SnapGene readings (all within ±0.9 °C); it is not SnapGene's published algorithm, and the polymerase vendor's own Tm scale was not reconciled. Details: [docs/design-notes.md](docs/design-notes.md).
+
+## For developers
+
+`window.SPDesigner = {design, verify, tm, …}` is exposed for scripting. Tests open `index.html` in headless Chromium:
 
 ```bash
 pip install -r requirements-dev.txt
@@ -55,22 +62,8 @@ playwright install chromium
 python -m pytest -q tests
 ```
 
-The tests open `index.html` in headless Chromium.
+`data/` holds the nine signal-peptide sequences used as golden test input (and as the page's example); provenance and hashes are in `data/MANIFEST.md`.
 
-## Limitations / 未覆盖
+## Attribution and license
 
-- No vector sequence: the vector reading frame and primer mispriming sites on the vector are **not** checked.
-- The Tm model is calibrated on only 8 SnapGene readings; the polymerase vendor's own Tm scale (Primer Premier) was not reconciled.
-- No wet-lab validation yet of the M amount, cycle number, or single 60 °C annealing for 18–39 nt overlaps.
-
-## Data
-
-`data/golden_sp.csv` holds the 9 signal-peptide sequences used as golden test input; `data/*.fasta` are the same sequences for opening in SnapGene; provenance and hashes are in `data/MANIFEST.md`.
-
-## Method attribution
-
-SantaLucia, J. (1998) *PNAS* 95:1460–1465 (nearest-neighbour parameters). The 60 °C single-anneal rule follows the Vazyme Phanta UniFi master-mix manual (P516/P526 family).
-
-## License
-
-MIT — see [LICENSE](LICENSE).
+Nearest-neighbour parameters: SantaLucia, J. (1998) *PNAS* 95:1460–1465. The 60 °C single-anneal rule follows the Vazyme Phanta UniFi master-mix manual (P516/P526 family). MIT licensed, see [LICENSE](LICENSE).
