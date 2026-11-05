@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>信号肽 3 寡核苷酸组装引物设计器</title>
+<style>
+:root{--bg:#f6f7f9;--card:#fff;--ink:#1d2330;--muted:#667085;--line:#e1e5ec;--acc:#2457c5;
+--arm:#d9892b;--sp:#2f8f6b;--F:#2457c5;--M:#7a4bc2;--R:#c2412d;--ok:#1f8a4c;--warn:#b9770e;--bad:#c2312d;--okbg:#e6f4ec;--warnbg:#fbf0dc;--badbg:#fbe4e2}
+@media (prefers-color-scheme:dark){:root{--bg:#14171d;--card:#1c2029;--ink:#e6e9ef;--muted:#98a1b3;--line:#2c3240;--acc:#7aa2f7;
+--arm:#e0a050;--sp:#52b788;--F:#7aa2f7;--M:#b794f4;--R:#f08a78;--ok:#58c27d;--warn:#e0a84a;--bad:#f07a74;--okbg:#17301f;--warnbg:#33290f;--badbg:#3a1a18}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.55 -apple-system,"Segoe UI","Noto Sans CJK SC","PingFang SC",sans-serif}
+.wrap{max-width:1100px;margin:0 auto;padding:20px 16px 60px}
+h1{font-size:20px;margin:0 0 4px}
+.sub{color:var(--muted);margin:0 0 16px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:14px 16px;margin-bottom:14px}
+.card h2{font-size:15px;margin:0 0 10px}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media (max-width:760px){.grid{grid-template-columns:1fr}}
+label{display:block;font-size:12px;color:var(--muted);margin:8px 0 3px}
+textarea,input[type=text],input[type=number]{width:100%;font:12.5px/1.4 ui-monospace,Menlo,Consolas,monospace;background:var(--bg);color:var(--ink);border:1px solid var(--line);border-radius:6px;padding:7px 8px}
+textarea{min-height:150px;resize:vertical}
+.row{display:flex;gap:10px;flex-wrap:wrap}.row>div{flex:1;min-width:110px}
+button{font:inherit;border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:6px;padding:6px 12px;cursor:pointer}
+button.primary{background:var(--acc);border-color:var(--acc);color:#fff}
+button:hover{filter:brightness(.96)}
+.note{font-size:12px;color:var(--muted)}
+.badge{display:inline-block;font-size:11.5px;padding:1px 8px;border-radius:10px;margin-right:6px;white-space:nowrap}
+.b-ok{background:var(--okbg);color:var(--ok)}.b-warn{background:var(--warnbg);color:var(--warn)}.b-bad{background:var(--badbg);color:var(--bad)}
+.sp-head{display:flex;justify-content:space-between;align-items:baseline;flex-wrap:wrap;gap:6px;margin-bottom:6px}
+.sp-head b{font-size:15px}
+table{border-collapse:collapse;width:100%;font-size:12.5px}
+th,td{text-align:left;padding:5px 8px;border-bottom:1px solid var(--line);vertical-align:top}
+th{color:var(--muted);font-weight:500;font-size:12px}
+td.seq{font-family:ui-monospace,Menlo,Consolas,monospace;word-break:break-all;font-size:12px}
+.mono{font-family:ui-monospace,Menlo,Consolas,monospace}
+.chk{list-style:none;margin:6px 0 0;padding:0;font-size:12.5px}
+.chk li{padding:1px 0}.chk .ok{color:var(--ok)}.chk .bad{color:var(--bad)}
+.warns{margin:6px 0 0;padding-left:18px;font-size:12.5px;color:var(--warn)}
+svg text{font:11px ui-monospace,Menlo,Consolas,monospace;fill:var(--ink)}
+svg .lbl{font:11px -apple-system,"Noto Sans CJK SC",sans-serif;fill:var(--muted)}
+.legend span{display:inline-block;margin-right:12px;font-size:12px}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:4px;vertical-align:-1px}
+details summary{cursor:pointer;color:var(--acc)}
+pre{background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:8px 10px;overflow:auto;font-size:12px;margin:6px 0}
+</style>
+</head>
+<body>
+<div class="wrap">
+<h1>信号肽 3 寡核苷酸组装引物设计器</h1>
+<p class="sub">输入信号肽 DNA → 给出带同源臂的 F / M / R 三条寡核苷酸 → 页面内独立验证（模拟 PCR 闭包）→ 导出订购表。纯浏览器运行，序列不上传。</p>
+
+<div class="grid">
+<div class="card">
+  <h2>1 · 信号肽序列</h2>
+  <label>每行一条：<span class="mono">名称 序列</span>（空格、制表符或逗号分隔）。可选第三列为预期氨基酸；也可粘贴 FASTA。</label>
+  <textarea id="input" spellcheck="false" wrap="off"></textarea>
+  <div style="margin-top:8px"><button onclick="loadExample()">载入 C01–C09 示例</button> <button class="primary" onclick="run()">设计并验证</button></div>
+</div>
+<div class="card">
+  <h2>2 · 同源臂与参数</h2>
+  <label>上游同源臂（5′→3′）</label><input type="text" id="up" value="GGAGAGGGACGCGT">
+  <label>下游同源臂（5′→3′）</label><input type="text" id="down" value="TGGCCATTAACCGC">
+  <div class="row">
+    <div><label>单条寡核苷酸上限 (nt)</label><input type="number" id="maxLen" value="60"></div>
+    <div><label>重叠区长度 (nt) 下限</label><input type="number" id="minOv" value="18"></div>
+    <div><label>重叠区长度 (nt) 上限</label><input type="number" id="maxOv" value="45"></div>
+  </div>
+  <div class="row">
+    <div><label>Tm 目标窗口 下沿 (°C)</label><input type="number" id="tmLow" value="59" step="0.5"></div>
+    <div><label>Tm 目标窗口 上沿 (°C)</label><input type="number" id="tmHigh" value="61" step="0.5"></div>
+    <div><label>Tm 硬下限 (°C)</label><input type="number" id="tmFloor" value="55" step="0.5"></div>
+  </div>
+  <p class="note" style="margin-top:8px">Tm：SantaLucia 1998 最近邻法，50 mM Na⁺、0.9 µM 引物，盐校正用熵项式。参数用 8 个 SnapGene 读数拟合，与 SnapGene 相差 ≲1 °C（读数本身是取整的）。
+  评分：两个重叠区 Tm 都落进目标窗口优先，其次两者相差小、3′ 端为 G/C、总长短。诺唯赞 P516/P526 的通用程序是 60 °C 单一退火。</p>
+</div>
+</div>
+
+<div id="out"></div>
+</div>
+
+<script>
+/* ======================= 核心：序列与 Tm ======================= */
+const COMP={A:'T',T:'A',G:'C',C:'G'};
+const rc=s=>{let o='';for(let i=s.length-1;i>=0;i--)o+=COMP[s[i]];return o};
+const gcPct=s=>{let n=0;for(const c of s)if(c==='G'||c==='C')n++;return 100*n/s.length};
+// SantaLucia 1998 最近邻参数（DNA/DNA）；dH kcal/mol，dS cal/mol/K
+const NNP={AA:[-7.9,-22.2],TT:[-7.9,-22.2],AT:[-7.2,-20.4],TA:[-7.2,-21.3],CA:[-8.5,-22.7],TG:[-8.5,-22.7],GT:[-8.4,-22.4],AC:[-8.4,-22.4],CT:[-7.8,-21.0],AG:[-7.8,-21.0],GA:[-8.2,-22.2],TC:[-8.2,-22.2],CG:[-10.6,-27.2],GC:[-9.8,-24.4],GG:[-8.0,-19.9],CC:[-8.0,-19.9]};
+/* 盐校正用 SantaLucia 1998 的熵项式 dS += 0.368·(N-1)·ln[Na+]（原单点突变工具用的 16.6·log10[Na+] 经验式比 SnapGene 低约 7 °C）。
+   50 mM Na+、引物 0.9 µM 是用 8 个 SnapGene 读数拟合的（见 README），不是 SnapGene 公开的参数。 */
+const TM_NA=0.05,TM_CT=0.9e-6;
+function tm(seq){
+  let dH=0,dS=0;
+  for(const b of [seq[0],seq[seq.length-1]]){ if(b==='G'||b==='C'){dH+=0.1;dS-=2.8}else{dH+=2.3;dS+=4.1} }
+  for(let i=0;i<seq.length-1;i++){const p=NNP[seq.slice(i,i+2)];dH+=p[0];dS+=p[1]}
+  dS+=0.368*(seq.length-1)*Math.log(TM_NA);
+  return (dH*1000)/(dS+1.987*Math.log(TM_CT/4))-273.15;
+}
+const CODON={TTT:'F',TTC:'F',TTA:'L',TTG:'L',CTT:'L',CTC:'L',CTA:'L',CTG:'L',ATT:'I',ATC:'I',ATA:'I',ATG:'M',GTT:'V',GTC:'V',GTA:'V',GTG:'V',TCT:'S',TCC:'S',TCA:'S',TCG:'S',CCT:'P',CCC:'P',CCA:'P',CCG:'P',ACT:'T',ACC:'T',ACA:'T',ACG:'T',GCT:'A',GCC:'A',GCA:'A',GCG:'A',TAT:'Y',TAC:'Y',TAA:'*',TAG:'*',CAT:'H',CAC:'H',CAA:'Q',CAG:'Q',AAT:'N',AAC:'N',AAA:'K',AAG:'K',GAT:'D',GAC:'D',GAA:'E',GAG:'E',TGT:'C',TGC:'C',TGA:'*',TGG:'W',CGT:'R',CGC:'R',CGA:'R',CGG:'R',AGT:'S',AGC:'S',AGA:'R',AGG:'R',GGT:'G',GGC:'G',GGA:'G',GGG:'G'};
+function translate(dna){let o='';for(let i=0;i+2<dna.length;i+=3)o+=CODON[dna.slice(i,i+3)]||'?';return o}
+
+/* ======================= 设计器 ======================= */
+const DEFAULTS={up:'GGAGAGGGACGCGT',down:'TGGCCATTAACCGC',maxLen:60,minOv:18,maxOv:45,tmFloor:55,tmLow:59,tmHigh:61};
+function windowsOf(full,cfg){
+  const L=full.length,out=[];
+  for(let a=0;a<L;a++)for(let n=cfg.minOv;n<=cfg.maxOv&&a+n<=L;n++){
+    const s=full.slice(a,a+n);out.push({a,b:a+n,tm:tm(s),gc:gcPct(s)});
+  }
+  return out;
+}
+function design(name,sp,userCfg){
+  const cfg=Object.assign({},DEFAULTS,userCfg||{});
+  const full=cfg.up+sp+cfg.down,L=full.length;
+  const W=windowsOf(full,cfg).filter(w=>w.tm>=cfg.tmFloor);
+  const left=W.filter(w=>w.b<=cfg.maxLen);            // F = full[0:b]，M 从 a 开始
+  const right=W.filter(w=>w.a>=L-cfg.maxLen);         // R = rc(full[a:L])，M 到 b 结束
+  const isGC=c=>c==='G'||c==='C';
+  let best=null,feasible=0;
+  for(const l of left)for(const r of right){
+    if(!(l.a<r.a&&l.b<r.b))continue;                  // M 须从 F 的 5′ 侧起、到 R 的 3′ 侧止；F 与 R 允许直接重叠
+    const Mlen=r.b-l.a; if(Mlen>cfg.maxLen)continue;
+    feasible++;
+    const flen=l.b,rlen=L-r.a,minT=Math.min(l.tm,r.tm),dT=Math.abs(l.tm-r.tm);
+    const clamp=(isGC(full[l.b-1])?1:0)+(isGC(full[r.a])?1:0);   // F 3′ 末碱基；R 3′ 末碱基 = full[r.a] 的互补
+    const gcBad=(l.gc<35||l.gc>65?1:0)+(r.gc<35||r.gc>65?1:0);
+    const out=x=>Math.max(cfg.tmLow-x,x-cfg.tmHigh,0);     // 离目标窗口的距离
+    const F=full.slice(0,l.b),R=rc(full.slice(r.a)),dimer=rc(F.slice(-3))===R.slice(-3)?1:0;   // F/R 3′ 端 3 nt 互补
+    const score=[Math.round((out(l.tm)+out(r.tm))*4)/4,dimer,Math.round(dT*2)/2,-clamp,gcBad,flen+Mlen+rlen];
+    if(!best||cmpArr(score,best.score)<0)best={score,l,r,flen,Mlen,rlen};
+  }
+  if(!best)return {name,sp,ok:false,error:`在 ≤${cfg.maxLen} nt、重叠区 Tm ≥${cfg.tmFloor} °C 的条件下找不到可行的三条寡核苷酸（片段 ${L} bp）。可放宽长度上限或 Tm 下限。`,cfg,full};
+  const {l,r}=best;
+  const F=full.slice(0,l.b),M=full.slice(l.a,r.b),R=rc(full.slice(r.a));
+  return {name,sp,cfg,full,F,M,R,ok:true,feasible,
+    ovF:{a:l.a,b:l.b,seq:full.slice(l.a,l.b),tm:l.tm,gc:l.gc},
+    ovR:{a:r.a,b:r.b,seq:full.slice(r.a,r.b),tm:r.tm,gc:r.gc}};
+}
+function cmpArr(x,y){for(let i=0;i<x.length;i++){if(x[i]!==y[i])return x[i]<y[i]?-1:1}return 0}
+
+/* ======================= 独立验证：模拟 PCR 闭包 =======================
+   只看最终的三条寡核苷酸（不看设计器的内部结果）。每条链的 3′ 端 nmin nt 若能与另一条链配对，
+   就沿模板延伸到模板 5′ 端；反复直到没有新链。 */
+function closure(oligos,nmin=12,cap=400){
+  const pool=new Set(oligos);let changed=true,overflow=false;
+  while(changed&&!overflow){
+    changed=false;const arr=[...pool];
+    for(const x of arr){
+      if(x.length<nmin)continue;
+      const key=rc(x.slice(-nmin));
+      for(const y of arr){
+        let j=y.indexOf(key);
+        while(j!==-1){
+          const nw=x+rc(y.slice(0,j));
+          if(!pool.has(nw)){pool.add(nw);changed=true;if(pool.size>cap){overflow=true;break}}
+          j=y.indexOf(key,j+1);
+        }
+        if(overflow)break;
+      }
+      if(overflow)break;
+    }
+  }
+  return {pool,overflow};
+}
+function verify(spec){
+  const {up,down,sp,F,M,R}=spec,maxLen=spec.maxLen||60,checks=[];
+  const add=(id,ok,msg)=>checks.push({id,ok,msg});
+  const T=up+sp+down,rT=rc(T);
+  add('chars',[F,M,R].every(s=>/^[ACGT]+$/.test(s)),'三条寡核苷酸只含 A/C/G/T');
+  add('len',[F,M,R].every(s=>s.length<=maxLen),`三条长度均 ≤${maxLen} nt（F ${F.length}、M ${M.length}、R ${R.length}）`);
+  if(!checks[0].ok)return {ok:false,checks,T};
+  const {pool,overflow}=closure([F,M,R]);
+  add('overflow',!overflow,'模拟 PCR 闭包有限收敛（没有失控的错配扩增）');
+  add('T',pool.has(T),`能从 F/M/R 组装出完整上链（${T.length} nt）`);
+  add('rT',pool.has(rT),'能组装出完整下链');
+  const off=[...pool].filter(s=>!T.includes(s)&&!rT.includes(s));
+  add('offtarget',off.length===0,off.length?`出现 ${off.length} 条不属于目标产物的链（疑似错配引发）`:'所有中间产物都是目标产物的子序列，无错配产物');
+  add('arms',T.startsWith(up)&&T.endsWith(down),'产物首尾分别是上游臂与下游臂');
+  add('spmid',T.slice(up.length,T.length-down.length)===sp,'两臂之间的序列与输入的信号肽 DNA 完全一致');
+  add('startF',F===T.slice(0,F.length),'F 是产物上链的前缀');
+  add('startR',R===rT.slice(0,R.length),'R 是产物下链的前缀');
+  const aa=translate(sp);
+  add('atg',sp.startsWith('ATG'),'信号肽以 ATG 开头');
+  add('frame',sp.length%3===0,`信号肽长度 ${sp.length} nt 是 3 的倍数`);
+  add('stop',!aa.slice(0,-1).includes('*')&&!aa.includes('?'),'没有内部终止密码子');
+  if(spec.expectedAA)add('aa',aa===spec.expectedAA,`翻译结果与预期氨基酸${aa===spec.expectedAA?'一致':'不一致：'+aa+' ≠ '+spec.expectedAA}`);
+  return {ok:checks.every(c=>c.ok),checks,T,aa,pool:[...pool]};
+}
+function adviceFor(d){
+  const w=[];
+  const mt=Math.min(d.ovF.tm,d.ovR.tm);
+  if(mt<d.cfg.tmLow-0.5)w.push(`重叠区最低 Tm ${mt.toFixed(1)} °C，低于目标窗口 ${d.cfg.tmLow}–${d.cfg.tmHigh} °C（SnapGene 口径）。这一条首次做时建议跑一次 52–62 °C 梯度。`);
+  const mx=Math.max(d.ovF.tm,d.ovR.tm);
+  if(mx>d.cfg.tmHigh+2)w.push(`重叠区最高 Tm ${mx.toFixed(1)} °C，高于目标窗口上沿较多（对 60 °C 退火无害，但可能抬高错配风险）。`);
+  if(Math.abs(d.ovF.tm-d.ovR.tm)>1)w.push(`两个重叠区 Tm 相差 ${Math.abs(d.ovF.tm-d.ovR.tm).toFixed(1)} °C（厂家建议引物对相差 ≤1 °C）。`);
+  for(const [n,o] of [['F-M',d.ovF],['M-R',d.ovR]])if(o.gc<40||o.gc>60)w.push(`${n} 重叠区 GC ${o.gc.toFixed(0)}%，不在 40–60%。`);
+  if(!/[GC]$/.test(d.F))w.push('F 的 3′ 末端不是 G/C。');
+  if(!/[GC]$/.test(d.R))w.push('R 的 3′ 末端不是 G/C。');
+  // F 与 R 3′ 端互补 ≥3 nt
+  if(rc(d.F.slice(-3))===d.R.slice(-3))w.push('F 与 R 的 3′ 末端 3 nt 互补，可能形成引物二聚体。');
+  if([d.F,d.M,d.R].some(o=>/(.)\1{5,}/.test(o)))w.push('含 ≥6 个连续相同碱基（来自 SP 本身的序列，合成和退火时留意）。');
+  return w;
+}
+
+/* ======================= 页面 ======================= */
+const EXAMPLE=`C01 ATGCGTTCTTATATAAAAGTCCTAACAATGTGTTTTCTGGGGCTCATACTTTTTGTGCCAACACAGACCGCTTTGGCC MRSYIKVLTMCFLGLILFVPTQTALA
+C02 ATGAAAACAAAGACACTGTTCATATTCAGTGCCATTTTAACCCTATCGATATTTGCGCCAAATACAACCTTCGCA MKTKTLFIFSAILTLSIFAPNTTFA
+C03 ATGCCTTATCTGAAACGAGTGTTGCTGCTTCTTGTCACTGGATTGTTTATGAGTTTGTTTGGAGACACTGCTACTGCCTCAGCT MPYLKRVLLLLVTGLFMSLFGDTATASA
+C04 ATGTTGACGAAGCGCTTGCTTACTATATACATTATGTTATTAGGGTTGATTGCATGGTTTCCAGGTGCGACAGTCCCCGCACAAGCT MLTKRLLTIYIMLLGLIAWFPGATVPAQA
+C05 ATGAGATTCACTAAGTTCATGTCAATTGTAGTTGGATTTTTGTCTGTTTTAGGGTTGGCTGCGGTTTTTCCATTAACGGCACAAGCA MRFTKFMSIVVGFLSVLGLAAVFPLTAQA
+C06 ATGTTTAAGAAACATACGATCTCTTTGCTCATTATATTTTTACTTGCGTCTGCTGTTTTAGCAAAACCAACAGAAGCG MFKKHTISLLIIFLLASAVLAKPTEA
+C07 ATGAAACGGCGGAGGTCTATTTTTATTACGTGTTTATTGATTACGTTATTGACAATGGGCGGCATGATAGCTTCGCCGGCATCAGCA MKRRRSIFITCLLITLLTMGGMIASPASA
+C08 ATGAAAAAAGTACTTATGGCATTCATTATTTGTTTATCGCTGATTCTATCTGGGTTAGCCGCTCCGCCGTCTGGCGCAAAAGCT MKKVLMAFIICLSLILSGLAAPPSGAKA
+C09 ATGCTAAAAAGAACTTCATTCGTATCTTCATTATTCATCAGTTCAGCTGTTTTACTACTTCCTTCGGGCCAAGCTCATGCA MLKRTSFVSSLFISSAVLLLPSGQAHA`;
+const $=id=>document.getElementById(id);
+function loadExample(){$('input').value=EXAMPLE;run()}
+function parseInput(txt){
+  const items=[];let fasta=null;
+  for(const raw of txt.split(/\r?\n/)){
+    const line=raw.trim();if(!line)continue;
+    if(line[0]==='>'){fasta={name:line.slice(1).trim().split(/\s+/)[0]||('SP'+(items.length+1)),seq:''};items.push(fasta);continue}
+    if(fasta&&/^[ACGTacgt\s]+$/.test(line)){fasta.seq+=line.replace(/\s/g,'').toUpperCase();continue}
+    fasta=null;
+    const p=line.split(/[\s,;\t]+/).filter(Boolean);
+    if(p.length===1)items.push({name:'SP'+(items.length+1),seq:p[0].toUpperCase()});
+    else items.push({name:p[0],seq:p[1].toUpperCase(),aa:p[2]?p[2].toUpperCase():undefined});
+  }
+  return items;
+}
+function cfgFromUI(){
+  return {up:$('up').value.trim().toUpperCase(),down:$('down').value.trim().toUpperCase(),
+    maxLen:+$('maxLen').value,minOv:+$('minOv').value,maxOv:+$('maxOv').value,tmFloor:+$('tmFloor').value,tmLow:+$('tmLow').value,tmHigh:+$('tmHigh').value};
+}
+const esc=s=>String(s).replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
+function mapSVG(d){
+  const L=d.full.length,W=1040,pad=8,sc=(W-2*pad)/L,x=i=>pad+i*sc,H=150;
+  const bar=(a,b,y,col,txt,h=16,op=1)=>`<rect x="${x(a)}" y="${y}" width="${(b-a)*sc}" height="${h}" rx="3" fill="${col}" opacity="${op}"/>`+(txt?`<text x="${x(a)+4}" y="${y+h-4}" style="fill:#fff">${txt}</text>`:'');
+  const up=d.cfg.up.length,dn=d.cfg.down.length,spE=L-dn;
+  let s=`<svg viewBox="0 0 ${W} ${H}" width="100%" role="img" aria-label="${esc(d.name)} 组装示意">`;
+  s+=`<text class="lbl" x="${pad}" y="12">完整产物 ${L} bp</text>`;
+  s+=bar(0,up,18,'var(--arm)','上游臂')+bar(up,spE,18,'var(--sp)','信号肽 '+d.sp.length+' nt')+bar(spE,L,18,'var(--arm)','下游臂');
+  // 重叠区高亮
+  s+=`<rect x="${x(d.ovF.a)}" y="14" width="${(d.ovF.b-d.ovF.a)*sc}" height="26" fill="none" stroke="var(--ink)" stroke-dasharray="3 2" rx="3"/>`;
+  s+=`<rect x="${x(d.ovR.a)}" y="14" width="${(d.ovR.b-d.ovR.a)*sc}" height="26" fill="none" stroke="var(--ink)" stroke-dasharray="3 2" rx="3"/>`;
+  s+=bar(0,d.F.length,50,'var(--F)',`F ${d.F.length} nt →`);
+  s+=bar(d.ovF.a,d.ovR.b,72,'var(--M)',`M ${d.M.length} nt（有义链）`);
+  s+=bar(d.ovR.a,L,94,'var(--R)',`← R ${d.R.length} nt`);
+  s+=`<text class="lbl" x="${x(d.ovF.a)}" y="132">F–M 重叠 ${d.ovF.b-d.ovF.a} nt · Tm ${d.ovF.tm.toFixed(1)} °C · GC ${d.ovF.gc.toFixed(0)}%</text>`;
+  s+=`<text class="lbl" x="${Math.min(x(d.ovR.a),W-330)}" y="146">M–R 重叠 ${d.ovR.b-d.ovR.a} nt · Tm ${d.ovR.tm.toFixed(1)} °C · GC ${d.ovR.gc.toFixed(0)}%</text>`;
+  return s+'</svg>';
+}
+function render(results){
+  let nOk=0,html='';
+  const orderRows=[];
+  for(const r of results){
+    if(!r.ok){html+=`<div class="card"><div class="sp-head"><b>${esc(r.name)}</b><span class="badge b-bad">设计失败</span></div><div style="color:var(--bad)">${esc(r.error)}</div></div>`;continue}
+    const v=r.v,adv=r.adv;nOk+=v.ok?1:0;
+    const tier=v.ok?(adv.length?'b-warn':'b-ok'):'b-bad';
+    const badge=v.ok?`<span class="badge b-ok">验证通过 ${v.checks.length}/${v.checks.length}</span>`:`<span class="badge b-bad">验证未通过</span>`;
+    const mt=Math.min(r.ovF.tm,r.ovR.tm);
+    html+=`<div class="card"><div class="sp-head"><b>${esc(r.name)}</b><span>${badge}<span class="badge ${tier}">${adv.length?adv.length+' 条提示':'无提示'}</span><span class="note">片段 ${r.full.length} bp · 重叠区最低 Tm ${mt.toFixed(1)} °C</span></span></div>`;
+    html+=mapSVG(r);
+    html+=`<table style="margin-top:8px"><tr><th>寡核苷酸</th><th>5′→3′ 序列</th><th>长度</th><th>说明</th></tr>
+      <tr><td><b>${esc(r.name)}_F</b></td><td class="seq">${esc(r.F)}</td><td>${r.F.length}</td><td>上游臂 + 信号肽 5′ 段；3′ 端 ${r.ovF.b-r.ovF.a} nt 与 M 相同</td></tr>
+      <tr><td><b>${esc(r.name)}_M</b></td><td class="seq">${esc(r.M)}</td><td>${r.M.length}</td><td>中间模板（有义链），低浓度加入</td></tr>
+      <tr><td><b>${esc(r.name)}_R</b></td><td class="seq">${esc(r.R)}</td><td>${r.R.length}</td><td>下游臂 + 信号肽 3′ 段（反向互补）；3′ 端 ${r.ovR.b-r.ovR.a} nt 与 M 互补</td></tr></table>`;
+    html+=`<details style="margin-top:6px"><summary>验证明细（${v.checks.length} 项）</summary><ul class="chk">${v.checks.map(c=>`<li class="${c.ok?'ok':'bad'}">${c.ok?'✓':'✗'} ${esc(c.msg)}</li>`).join('')}</ul>
+      <div class="note" style="margin-top:4px">翻译：<span class="mono">${esc(v.aa)}</span></div></details>`;
+    if(adv.length)html+=`<ul class="warns">${adv.map(w=>`<li>${esc(w)}</li>`).join('')}</ul>`;
+    html+='</div>';
+    for(const [suf,seq,role] of [['F',r.F,'正向引物（含上游臂）'],['M',r.M,'中间模板'],['R',r.R,'反向引物（含下游臂）']])orderRows.push([r.name+'_'+suf,seq,seq.length,role]);
+  }
+  const head=`<div class="card"><h2>结果概览</h2><span class="badge ${nOk===results.length?'b-ok':'b-bad'}">${nOk}/${results.length} 条设计并验证通过</span>
+    <div class="legend" style="margin-top:8px"><span><i style="background:var(--arm)"></i>同源臂</span><span><i style="background:var(--sp)"></i>信号肽</span><span><i style="background:var(--F)"></i>F</span><span><i style="background:var(--M)"></i>M</span><span><i style="background:var(--R)"></i>R</span><span>虚线框 = 重叠区</span></div></div>`;
+  let order='';
+  if(orderRows.length){
+    order=`<div class="card"><h2>订购表（${orderRows.length} 条）</h2>
+    <div style="margin-bottom:8px"><button onclick="copyOrder()">复制为制表符文本</button> <button onclick="downloadOrder()">下载 CSV</button></div>
+    <table><tr><th>名称</th><th>序列 5′→3′</th><th>长度</th><th>用途</th></tr>${orderRows.map(r=>`<tr><td>${esc(r[0])}</td><td class="seq">${esc(r[1])}</td><td>${r[2]}</td><td>${esc(r[3])}</td></tr>`).join('')}</table>
+    <p class="note">纯化方式按公司规格选择（均 ≤${results.find(r=>r.ok).cfg.maxLen} nt）。下单前请再用“验证明细”核对一遍序列。</p></div>`;
+    window.__order=orderRows;
+  }
+  const pcr=`<div class="card"><h2>PCR 起始方案（诺唯赞 P526 = 2× Phanta UniFi Master Mix, Dye Plus）</h2>
+  <p class="note">依据 P516（同一预混液的无染料版）说明书 V24.1 的通用程序；我没有读到 P526 自己的说明书，请与你手里的说明书核对。M 的用量和循环数是我按三寡核苷酸组装的原理给的起点，未经实验验证。</p>
+  <table><tr><th>体系（50 µl）</th><th>程序（单一退火温度）</th></tr><tr><td class="mono" style="font-size:12px">2× Master Mix 25 µl<br>F（10 µM）2 µl → 终浓度 0.4 µM<br>R（10 µM）2 µl → 终浓度 0.4 µM<br>M（先稀释到 1 µM）1 µl → 终浓度 0.02 µM<br>无模板 DNA；ddH₂O 补至 50 µl</td>
+  <td class="mono" style="font-size:12px">98 °C 30 s<br>98 °C 10 s → <b>60 °C 10 s</b> → 72 °C 5 s（产物约 100 bp，15 s/kb 折算不足 2 s，取 5 s），25–35 个循环<br>72 °C 5 min</td></tr></table>
+  <p class="note">厂家规则：正反向引物 Tm 均 &gt;50 °C（厂家用 Primer Premier 5 算）时退火 60 °C；本设计让两个重叠区在 SnapGene 口径下落进目标窗口。产物约 103–115 bp，纯化时选适合小片段的方法，并用 2–3% 琼脂糖胶或 PAGE 区分产物与约 60 bp 的 M。</p></div>`;
+  $('out').innerHTML=head+html+order+pcr;
+}
+function run(){
+  const items=parseInput($('input').value),cfg=cfgFromUI(),res=[];
+  const bad=items.filter(i=>!/^[ACGT]+$/.test(i.seq));
+  for(const it of items){
+    if(!/^[ACGT]+$/.test(it.seq)){res.push({name:it.name,ok:false,error:'序列含 A/C/G/T 以外的字符。'});continue}
+    const d=design(it.name,it.seq,cfg);
+    if(d.ok){d.v=verify({up:cfg.up,down:cfg.down,sp:it.seq,F:d.F,M:d.M,R:d.R,maxLen:cfg.maxLen,expectedAA:it.aa});d.adv=adviceFor(d)}
+    res.push(d);
+  }
+  render(res);window.__results=res;
+}
+function orderTSV(){return window.__order.map(r=>r.slice(0,3).join('\t')).join('\n')}
+function copyOrder(){navigator.clipboard.writeText(orderTSV()).catch(()=>{})}
+function downloadOrder(){
+  const csv='name,sequence_5to3,length,role\n'+window.__order.map(r=>r.map(x=>/[,"]/.test(x)?'"'+String(x).replace(/"/g,'""')+'"':x).join(',')).join('\n')+'\n';
+  const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'}));a.download='sp_oligo_order.csv';a.click();
+}
+window.SPDesigner={design,verify,closure,tm,rc,translate,parseInput,DEFAULTS};
+$('input').value=EXAMPLE;run();
+</script>
+</body>
+</html>
